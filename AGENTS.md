@@ -6,7 +6,8 @@ Use English for all repository content: source code, identifiers, comments, docu
 
 ## Project Structure
 
-- `api/` contains the Go HTTP service and its tests.
+- `api/cmd/server/` is the API composition root; `api/internal/` owns configuration, persistence, HTTP handlers, and server lifecycle.
+- `api/` contains the Go service and its tests.
 - `web/` contains the React and TypeScript dashboard, built with Vite and served by Caddy.
 - `firmware/` contains integration notes for the ESP32 team; firmware is developed and flashed separately.
 - `docs/` contains the HTTP API contract and integration guidance.
