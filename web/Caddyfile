@@ -1,0 +1,13 @@
+:80 {
+	encode zstd gzip
+
+	@api path /api/*
+	reverse_proxy @api api:8080
+
+	@websocket path /ws/*
+	reverse_proxy @websocket api:8080
+
+	root * /srv
+	try_files {path} /index.html
+	file_server
+}
