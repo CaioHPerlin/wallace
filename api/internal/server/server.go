@@ -16,7 +16,6 @@ type Server struct {
 	httpServer *http.Server
 }
 
-// New creates an HTTP server for the given address and handler.
 func New(address string, handler http.Handler) *Server {
 	return &Server{httpServer: &http.Server{
 		Addr:              address,
@@ -25,7 +24,7 @@ func New(address string, handler http.Handler) *Server {
 	}}
 }
 
-// Run serves requests until the listener fails or the context is canceled.
+// Run blocks until graceful shutdown completes or the listener fails.
 func (s *Server) Run(ctx context.Context) error {
 	serverErrors := make(chan error, 1)
 	go func() {

@@ -7,13 +7,12 @@ import (
 	"strings"
 )
 
-// Config contains the runtime settings required by the API process.
 type Config struct {
 	HTTPAddress string
 	DatabaseURL string
 }
 
-// Load reads runtime settings from the process environment.
+// Load reads and validates runtime settings from the process environment.
 func Load() (Config, error) {
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if databaseURL == "" {

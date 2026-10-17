@@ -10,7 +10,7 @@ import (
 
 const readinessTimeout = 2 * time.Second
 
-// ReadinessProbe is the dependency required to report API readiness.
+// ReadinessProbe must return nil only while the database is reachable and honor the caller's context.
 type ReadinessProbe interface {
 	Ping(context.Context) error
 }
@@ -24,17 +24,16 @@ type healthResponse struct {
 	Status string `json:"status"`
 }
 
-// HealthHandler serves liveness and readiness checks for the API.
+// HealthHandler keeps liveness independent of external dependencies and checks readiness through a probe.
 type HealthHandler struct {
 	readiness ReadinessProbe
 }
 
-// NewHealthHandler creates health endpoints backed by the provided readiness probe.
 func NewHealthHandler(readiness ReadinessProbe) *HealthHandler {
 	return &HealthHandler{readiness: readiness}
 }
 
-// Register attaches health endpoints to a route registrar.
+// Register binds the API's liveness and readiness routes.
 func (h *HealthHandler) Register(router RouteRegistrar) {
 	router.Get("/api/health/live", h.live)
 	router.Get("/api/health/ready", h.ready)

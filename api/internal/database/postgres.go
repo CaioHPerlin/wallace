@@ -14,12 +14,11 @@ const (
 	retryInterval  = time.Second
 )
 
-// Postgres owns the PostgreSQL connection pool used by the API.
 type Postgres struct {
 	pool *pgxpool.Pool
 }
 
-// Open creates a connection pool and waits for PostgreSQL to become reachable.
+// Open creates the pool and waits until PostgreSQL is reachable or the context expires.
 func Open(ctx context.Context, connectionString string) (*Postgres, error) {
 	pool, err := pgxpool.New(ctx, connectionString)
 	if err != nil {
@@ -35,12 +34,11 @@ func Open(ctx context.Context, connectionString string) (*Postgres, error) {
 	return postgres, nil
 }
 
-// Ping reports whether PostgreSQL is reachable within the caller's context.
+// Ping checks connectivity using the caller's context deadline.
 func (p *Postgres) Ping(ctx context.Context) error {
 	return p.pool.Ping(ctx)
 }
 
-// Close releases the connection pool.
 func (p *Postgres) Close() {
 	p.pool.Close()
 }

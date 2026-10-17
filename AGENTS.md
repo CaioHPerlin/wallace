@@ -25,7 +25,7 @@ Keep API behavior and its contract aligned. Update `docs/api.yaml` when endpoint
 
 ## Style and Testing
 
-Run `gofmt` on Go files. Use two spaces in TypeScript, React, JSON, and YAML; keep names descriptive and JSON fields in `snake_case`. Put Go tests beside the code in `*_test.go` files. Cover health behavior and database failures in API tests; add dashboard tests when interactive behavior is introduced.
+Run `gofmt` on Go files. Use two spaces in TypeScript, React, JSON, and YAML; keep names descriptive and JSON fields in `snake_case`. Write comments only for non-obvious rationale, invariants, side effects, or contracts; avoid comments that restate names, signatures, or visible code. Put Go tests beside the code in `*_test.go` files. Cover health behavior and database failures in API tests; add dashboard tests when interactive behavior is introduced.
 
 ## Pull Requests and Configuration
 
