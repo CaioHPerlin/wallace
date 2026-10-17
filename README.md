@@ -23,7 +23,7 @@ Compose keeps database files in the `postgres_data` volume. To remove the stack 
 
 Run the database with `docker compose up -d db`. Start the API from `api/` with `DATABASE_URL='postgres://wallace:wallace-dev-password@localhost:5432/wallace?sslmode=disable' go run ./cmd/server`. Start the dashboard from `web/` with `npm install && npm run dev`; Vite forwards `/api` requests to the local API.
 
-The API exposes `/api/health/live` and `/api/health/ready`. The latter checks PostgreSQL connectivity. See [`docs/api.yaml`](docs/api.yaml) for the planned device API and [`firmware/README.md`](firmware/README.md) for ESP32 integration notes.
+The API exposes `/api/health/live` and `/api/health/ready`; the latter checks PostgreSQL connectivity. See [`docs/api.yaml`](docs/api.yaml) for the canonical API contract, including planned device routes and dashboard WebSocket messages, and [`firmware/README.md`](firmware/README.md) for ESP32 integration notes.
 
 ## Language and Contributions
 

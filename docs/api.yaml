@@ -1,32 +1,64 @@
 openapi: 3.1.0
 info:
-  title: WallAce Device API
+  title: WallAce API
   version: 0.1.0
-  description: Planned HTTP contract for ESP32 devices and the WallAce dashboard.
+  description: HTTP API and dashboard WebSocket contract for WallAce.
 servers:
   - url: http://localhost:8080
     description: Local API service
 paths:
+  /api/health/live:
+    get:
+      summary: Check whether the API process is alive
+      description: Implemented. This check does not depend on external services.
+      operationId: getLiveness
+      responses:
+        "200":
+          description: The API process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /api/health/ready:
+    get:
+      summary: Check whether the API is ready to serve requests
+      description: Implemented. Readiness requires a successful PostgreSQL connection.
+      operationId: getReadiness
+      responses:
+        "200":
+          description: The API is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: The API cannot reach PostgreSQL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
   /api/devices/{device_id}/detections:
     parameters:
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: "#/components/parameters/DeviceId"
     post:
       summary: Record a motion detection from a device
-      description: Planned endpoint; not implemented yet.
+      description: Planned; not implemented yet.
+      operationId: createDetection
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DetectionInput'
+              $ref: "#/components/schemas/DetectionInput"
       responses:
-        '201':
+        "201":
           description: Detection recorded
-        '400':
+        "400":
           description: Invalid request body
     get:
       summary: List device detections
-      description: Planned endpoint; not implemented yet.
+      description: Planned; not implemented yet.
+      operationId: listDetections
       parameters:
         - name: limit
           in: query
@@ -41,65 +73,79 @@ paths:
             default: 0
             minimum: 0
       responses:
-        '200':
+        "200":
           description: Detection history
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Detection'
+                  $ref: "#/components/schemas/Detection"
   /api/devices/{device_id}/config:
     parameters:
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: "#/components/parameters/DeviceId"
     get:
       summary: Get actuator configuration for a device
-      description: Planned endpoint; device firmware polls this endpoint every 3–5 seconds.
+      description: Planned; firmware polls this endpoint every 3–5 seconds.
+      operationId: getDeviceConfig
       responses:
-        '200':
+        "200":
           description: Current device configuration
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeviceConfig'
+                $ref: "#/components/schemas/DeviceConfig"
     put:
       summary: Update actuator configuration
-      description: Planned endpoint; not implemented yet.
+      description: Planned; not implemented yet.
+      operationId: updateDeviceConfig
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeviceConfig'
+              $ref: "#/components/schemas/DeviceConfig"
       responses:
-        '200':
+        "200":
           description: Configuration updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeviceConfig'
+                $ref: "#/components/schemas/DeviceConfig"
   /api/devices/{device_id}/heartbeat:
     parameters:
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: "#/components/parameters/DeviceId"
     post:
       summary: Record a device heartbeat
-      description: Planned endpoint; firmware should send this every 15–30 seconds.
+      description: Planned; firmware should send this every 15–30 seconds.
+      operationId: createDeviceHeartbeat
       responses:
-        '200':
+        "200":
           description: Heartbeat recorded
   /api/devices/{device_id}/status:
     parameters:
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: "#/components/parameters/DeviceId"
     get:
       summary: Get current device status
-      description: Planned endpoint; not implemented yet.
+      description: Planned; not implemented yet.
+      operationId: getDeviceStatus
       responses:
-        '200':
+        "200":
           description: Current online state and actuator configuration
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeviceStatus'
+                $ref: "#/components/schemas/DeviceStatus"
+x-websockets:
+  /ws/dashboard:
+    description: Planned; not implemented yet.
+    direction: API service to dashboard
+    messages:
+      - name: detection
+        contentType: application/json
+        description: Sent when the API receives a motion detection.
+        payload:
+          $ref: "#/components/schemas/DashboardDetectionEvent"
 components:
   parameters:
     DeviceId:
@@ -109,6 +155,13 @@ components:
       schema:
         type: string
   schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
     DetectionInput:
       type: object
       required: [ts]
@@ -119,7 +172,7 @@ components:
           example: 1732300000
     Detection:
       allOf:
-        - $ref: '#/components/schemas/DetectionInput'
+        - $ref: "#/components/schemas/DetectionInput"
         - type: object
           required: [id]
           properties:
@@ -135,12 +188,24 @@ components:
           type: boolean
     DeviceStatus:
       allOf:
-        - $ref: '#/components/schemas/DeviceConfig'
+        - $ref: "#/components/schemas/DeviceConfig"
         - type: object
           required: [online, last_heartbeat]
           properties:
             online:
               type: boolean
             last_heartbeat:
-              type: [integer, 'null']
+              type: [integer, "null"]
               description: Unix timestamp in seconds; null before the first heartbeat.
+    DashboardDetectionEvent:
+      type: object
+      required: [type, device_id, ts]
+      properties:
+        type:
+          type: string
+          const: detection
+        device_id:
+          type: string
+        ts:
+          type: integer
+          description: Unix timestamp in seconds
