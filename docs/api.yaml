@@ -1,0 +1,146 @@
+openapi: 3.1.0
+info:
+  title: WallAce Device API
+  version: 0.1.0
+  description: Planned HTTP contract for ESP32 devices and the WallAce dashboard.
+servers:
+  - url: http://localhost:8080
+    description: Local API service
+paths:
+  /api/devices/{device_id}/detections:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    post:
+      summary: Record a motion detection from a device
+      description: Planned endpoint; not implemented yet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DetectionInput'
+      responses:
+        '201':
+          description: Detection recorded
+        '400':
+          description: Invalid request body
+    get:
+      summary: List device detections
+      description: Planned endpoint; not implemented yet.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Detection history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Detection'
+  /api/devices/{device_id}/config:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      summary: Get actuator configuration for a device
+      description: Planned endpoint; device firmware polls this endpoint every 3–5 seconds.
+      responses:
+        '200':
+          description: Current device configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfig'
+    put:
+      summary: Update actuator configuration
+      description: Planned endpoint; not implemented yet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceConfig'
+      responses:
+        '200':
+          description: Configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfig'
+  /api/devices/{device_id}/heartbeat:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    post:
+      summary: Record a device heartbeat
+      description: Planned endpoint; firmware should send this every 15–30 seconds.
+      responses:
+        '200':
+          description: Heartbeat recorded
+  /api/devices/{device_id}/status:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      summary: Get current device status
+      description: Planned endpoint; not implemented yet.
+      responses:
+        '200':
+          description: Current online state and actuator configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStatus'
+components:
+  parameters:
+    DeviceId:
+      name: device_id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    DetectionInput:
+      type: object
+      required: [ts]
+      properties:
+        ts:
+          type: integer
+          description: Unix timestamp in seconds
+          example: 1732300000
+    Detection:
+      allOf:
+        - $ref: '#/components/schemas/DetectionInput'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+    DeviceConfig:
+      type: object
+      required: [led_enabled, buzzer_enabled]
+      properties:
+        led_enabled:
+          type: boolean
+        buzzer_enabled:
+          type: boolean
+    DeviceStatus:
+      allOf:
+        - $ref: '#/components/schemas/DeviceConfig'
+        - type: object
+          required: [online, last_heartbeat]
+          properties:
+            online:
+              type: boolean
+            last_heartbeat:
+              type: [integer, 'null']
+              description: Unix timestamp in seconds; null before the first heartbeat.
