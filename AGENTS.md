@@ -30,3 +30,17 @@ Run `gofmt` on Go files. Use two spaces in TypeScript, React, JSON, and YAML; ke
 ## Pull Requests and Configuration
 
 Describe the change, its validation, and any linked issue in each pull request. Include screenshots for visible dashboard changes. Keep credentials in an untracked `.env` file based on `.env.example`; never commit secrets. Local Compose credentials are for development only.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked as local Markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default triage labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repo. Read the root `GLOSSARY.md` and relevant records in `docs/adr/` for domain work. See `docs/agents/domain.md`.
