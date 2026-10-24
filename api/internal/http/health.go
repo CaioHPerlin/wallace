@@ -15,7 +15,6 @@ type ReadinessProbe interface {
 	Ping(context.Context) error
 }
 
-// RouteRegistrar registers GET handlers without exposing the router implementation.
 type RouteRegistrar interface {
 	Get(pattern string, handler nethttp.HandlerFunc)
 }
@@ -24,7 +23,6 @@ type healthResponse struct {
 	Status string `json:"status"`
 }
 
-// HealthHandler keeps liveness independent of external dependencies and checks readiness through a probe.
 type HealthHandler struct {
 	readiness ReadinessProbe
 }
@@ -33,7 +31,6 @@ func NewHealthHandler(readiness ReadinessProbe) *HealthHandler {
 	return &HealthHandler{readiness: readiness}
 }
 
-// Register binds the API's liveness and readiness routes.
 func (h *HealthHandler) Register(router RouteRegistrar) {
 	router.Get("/api/health/live", h.live)
 	router.Get("/api/health/ready", h.ready)

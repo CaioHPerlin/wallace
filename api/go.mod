@@ -1,4 +1,4 @@
-module github.com/wallace-project/wallace/api
+module github.com/caiohperlin/wallace/api
 
 go 1.24.0
 

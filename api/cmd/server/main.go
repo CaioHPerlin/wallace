@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/wallace-project/wallace/api/internal/config"
-	"github.com/wallace-project/wallace/api/internal/database"
-	"github.com/wallace-project/wallace/api/internal/http"
-	"github.com/wallace-project/wallace/api/internal/server"
+	"github.com/caiohperlin/wallace/api/internal/config"
+	"github.com/caiohperlin/wallace/api/internal/database"
+	"github.com/caiohperlin/wallace/api/internal/http"
+	"github.com/caiohperlin/wallace/api/internal/server"
 )
 
 func main() {

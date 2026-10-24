@@ -18,7 +18,6 @@ type Postgres struct {
 	pool *pgxpool.Pool
 }
 
-// Open creates the pool and waits until PostgreSQL is reachable or the context expires.
 func Open(ctx context.Context, connectionString string) (*Postgres, error) {
 	pool, err := pgxpool.New(ctx, connectionString)
 	if err != nil {
@@ -34,7 +33,6 @@ func Open(ctx context.Context, connectionString string) (*Postgres, error) {
 	return postgres, nil
 }
 
-// Ping checks connectivity using the caller's context deadline.
 func (p *Postgres) Ping(ctx context.Context) error {
 	return p.pool.Ping(ctx)
 }
