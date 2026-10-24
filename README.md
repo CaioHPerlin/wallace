@@ -1,30 +1,22 @@
 # WallAce
 
-WallAce is a remotely configurable motion alarm built around an ESP32 and a PIR sensor. The dashboard shows service availability today; event history, remote actuator controls, and real-time updates are planned for later implementation.
+### Produto: Sistema de Alarmes Remotamente Configurável
 
-## Local Stack
+### Integrantes: Caio Hygino Perlin, Caio Ricarte Loyer e Murilo Toledo
 
-Requirements: Docker with the Compose plugin. Copy `.env.example` to `.env` to customize local PostgreSQL credentials, then start the stack:
+## Objetivo do Projeto
 
-```sh
-docker compose up --build
-```
+Criar um sistema IoT de detecção e monitoramento de movimento utilizando um ESP32 e um sensor PIR, permitindo o acompanhamento das detecções em tempo real por meio de um dashboard web e o controle remoto dos feedbacks físicos do dispositivo.
 
-Open the dashboard at <http://localhost:5173>. The API is available at <http://localhost:8080/api/health/ready>. PostgreSQL runs on the Compose network and is not published to the host.
+## A Necessidade (Por que construir?)
 
-```sh
-docker compose logs -f
-docker compose down
-```
+Ambientes residenciais, comerciais ou institucionais podem necessitar de uma forma simples de identificar movimentações e acompanhar esses eventos remotamente. Soluções tradicionais de monitoramento podem ser mais complexas, caras ou pouco flexíveis para projetos de pequeno porte. O WallAce busca oferecer uma alternativa simples e conectada, capaz de registrar detecções de movimento, disponibilizar essas informações em tempo real e permitir que o usuário controle e configure remotamente os alertas físicos do dispositivo.
 
-Compose keeps database files in the `postgres_data` volume. To remove the stack and its local database contents, run `docker compose down -v`.
+## Descrição do Produto (Como vai funcionar)
 
-## Working Locally
+O WallAce utilizará um dev kit ESP32 conectado à rede Wi-Fi. Na camada de percepção, será utilizado um sensor PIR, responsável por detectar movimentações no ambiente. O dispositivo também contará com um LED e um buzzer como atuadores para fornecer feedback visual e sonoro sempre que uma movimentação for identificada.
 
-Run the database with `docker compose up -d db`. Start the API from `api/` with `DATABASE_URL='postgres://wallace:wallace-dev-password@localhost:5432/wallace?sslmode=disable' go run ./cmd/server`. Start the dashboard from `web/` with `npm install && npm run dev`; Vite forwards `/api` requests to the local API.
+- Edge/Borda: O ESP32 realizará continuamente a leitura do sensor PIR. Ao detectar movimento, o dispositivo registrará o evento, poderá acionar localmente o LED e o buzzer e enviará a detecção ao servidor através da rede Wi-Fi. O funcionamento dos atuadores poderá ser habilitado ou desabilitado remotamente pelo usuário, sem necessidade de reprogramar o ESP32.
+- Nuvem/Aplicação: O backend será desenvolvido em Go e ficará responsável por receber os eventos enviados pelo ESP32 e distribuí-los em tempo real para o dashboard. A comunicação entre o servidor e a interface web será realizada por WebSocket. O frontend, desenvolvido em TypeScript, exibirá as detecções recentes e manterá um histórico dos eventos registrados. Pelo dashboard, o usuário também poderá habilitar ou desabilitar remotamente o buzzer e o LED, e o servidor enviará essas configurações de volta ao ESP32.
 
-The API exposes `/api/health/live` and `/api/health/ready`; the latter checks PostgreSQL connectivity. See [`docs/api.yaml`](docs/api.yaml) for the canonical API contract, including planned device routes and dashboard WebSocket messages, and [`firmware/README.md`](firmware/README.md) for ESP32 integration notes.
-
-## Language and Contributions
-
-Repository content and commit messages are in English. Follow [AGENTS.md](AGENTS.md) for development commands, formatting, testing, and pull request guidance.
+<img width="669" height="518" alt="image" src="https://github.com/user-attachments/assets/e7d5ecc3-24f2-4bd4-b088-9cb4fad7cf0e" />
