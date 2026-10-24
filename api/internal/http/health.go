@@ -6,17 +6,15 @@ import (
 	"log"
 	nethttp "net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 const readinessTimeout = 2 * time.Second
 
-// ReadinessProbe must return nil only while the database is reachable and honor the caller's context.
-type ReadinessProbe interface {
+// Pinger reports whether its backing service is reachable.
+type Pinger interface {
 	Ping(context.Context) error
-}
-
-type RouteRegistrar interface {
-	Get(pattern string, handler nethttp.HandlerFunc)
 }
 
 type healthResponse struct {
@@ -24,16 +22,18 @@ type healthResponse struct {
 }
 
 type HealthHandler struct {
-	readiness ReadinessProbe
+	pinger Pinger
 }
 
-func NewHealthHandler(readiness ReadinessProbe) *HealthHandler {
-	return &HealthHandler{readiness: readiness}
+func NewHealthHandler(pinger Pinger) *HealthHandler {
+	return &HealthHandler{pinger: pinger}
 }
 
-func (h *HealthHandler) Register(router RouteRegistrar) {
-	router.Get("/api/health/live", h.live)
-	router.Get("/api/health/ready", h.ready)
+func (h *HealthHandler) Routes() chi.Router {
+	r := chi.NewRouter()
+	r.Get("/live", h.live)
+	r.Get("/ready", h.ready)
+	return r
 }
 
 func (h *HealthHandler) live(w nethttp.ResponseWriter, _ *nethttp.Request) {
@@ -44,7 +44,7 @@ func (h *HealthHandler) ready(w nethttp.ResponseWriter, r *nethttp.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), readinessTimeout)
 	defer cancel()
 
-	if err := h.readiness.Ping(ctx); err != nil {
+	if err := h.pinger.Ping(ctx); err != nil {
 		writeHealth(w, nethttp.StatusServiceUnavailable, "unavailable")
 		return
 	}
