@@ -1,8 +1,13 @@
 openapi: 3.1.0
 info:
   title: WallAce API
-  version: 0.1.0
-  description: HTTP API and dashboard WebSocket contract for WallAce.
+  version: 0.2.0
+  description: |
+    HTTP API and dashboard WebSocket contract for WallAce.
+
+    Device routes under `/api/devices` require a shared bearer token
+    (`Authorization: Bearer <token>`). Health and dashboard WebSocket routes are open.
+    The `device_id` path parameter is the ESP32 factory MAC address (e.g. `A4:CF:12:34:56:78`).
 servers:
   - url: http://localhost:8080
     description: Local API service
@@ -37,13 +42,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /api/devices:
+    get:
+      summary: List known devices
+      description: Implemented. Returns every device the API has seen, ordered by first contact.
+      operationId: listDevices
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+  /api/devices/{device_id}:
+    parameters:
+      - $ref: "#/components/parameters/DeviceId"
+    patch:
+      summary: Rename a device
+      description: Implemented. Updates the user-facing label; empty clears it back to the MAC.
+      operationId: renameDevice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceNameInput"
+      responses:
+        "200":
+          description: Updated device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
   /api/devices/{device_id}/detections:
     parameters:
       - $ref: "#/components/parameters/DeviceId"
     post:
       summary: Record a motion detection from a device
-      description: Planned; not implemented yet.
+      description: Implemented. The API broadcasts a `detection` event to connected dashboards.
       operationId: createDetection
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -53,12 +98,18 @@ paths:
       responses:
         "201":
           description: Detection recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detection"
         "400":
           description: Invalid request body
     get:
       summary: List device detections
-      description: Planned; not implemented yet.
+      description: Implemented. Newest first.
       operationId: listDetections
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
@@ -86,8 +137,10 @@ paths:
       - $ref: "#/components/parameters/DeviceId"
     get:
       summary: Get actuator configuration for a device
-      description: Planned; firmware polls this endpoint every 3–5 seconds.
+      description: Implemented. Firmware polls this endpoint every 3–5 seconds.
       operationId: getDeviceConfig
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Current device configuration
@@ -97,8 +150,10 @@ paths:
                 $ref: "#/components/schemas/DeviceConfig"
     put:
       summary: Update actuator configuration
-      description: Planned; not implemented yet.
+      description: Implemented.
       operationId: updateDeviceConfig
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -117,8 +172,10 @@ paths:
       - $ref: "#/components/parameters/DeviceId"
     post:
       summary: Record a device heartbeat
-      description: Planned; firmware should send this every 15–30 seconds.
+      description: Implemented. Firmware should send this every 15–30 seconds.
       operationId: createDeviceHeartbeat
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Heartbeat recorded
@@ -127,8 +184,10 @@ paths:
       - $ref: "#/components/parameters/DeviceId"
     get:
       summary: Get current device status
-      description: Planned; not implemented yet.
+      description: Implemented. `online` is derived from the last heartbeat (within 60 seconds).
       operationId: getDeviceStatus
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: Current online state and actuator configuration
@@ -138,7 +197,7 @@ paths:
                 $ref: "#/components/schemas/DeviceStatus"
 x-websockets:
   /ws/dashboard:
-    description: Planned; not implemented yet.
+    description: Implemented. Open, push-only.
     direction: API service to dashboard
     messages:
       - name: detection
@@ -147,11 +206,16 @@ x-websockets:
         payload:
           $ref: "#/components/schemas/DashboardDetectionEvent"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   parameters:
     DeviceId:
       name: device_id
       in: path
       required: true
+      description: Device MAC address, e.g. `A4:CF:12:34:56:78`.
       schema:
         type: string
   schemas:
@@ -162,6 +226,31 @@ components:
         status:
           type: string
           enum: [ok, unavailable]
+    DeviceNameInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: User-facing label; empty falls back to the MAC address.
+    Device:
+      type: object
+      required: [device_id, name, led_enabled, buzzer_enabled, online, last_heartbeat]
+      properties:
+        device_id:
+          type: string
+          description: Device MAC address.
+        name:
+          type: string
+        led_enabled:
+          type: boolean
+        buzzer_enabled:
+          type: boolean
+        online:
+          type: boolean
+        last_heartbeat:
+          type: [integer, "null"]
+          description: Unix timestamp in seconds; null before the first heartbeat.
     DetectionInput:
       type: object
       required: [ts]
