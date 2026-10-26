@@ -10,6 +10,7 @@ import (
 type Config struct {
 	HTTPAddress string
 	DatabaseURL string
+	APIToken    string
 }
 
 // Load reads and validates runtime settings from the process environment.
@@ -17,6 +18,11 @@ func Load() (Config, error) {
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if databaseURL == "" {
 		return Config{}, fmt.Errorf("DATABASE_URL must be set")
+	}
+
+	apiToken := strings.TrimSpace(os.Getenv("API_TOKEN"))
+	if apiToken == "" {
+		return Config{}, fmt.Errorf("API_TOKEN must be set")
 	}
 
 	port := strings.TrimSpace(os.Getenv("PORT"))
@@ -32,5 +38,6 @@ func Load() (Config, error) {
 	return Config{
 		HTTPAddress: ":" + port,
 		DatabaseURL: databaseURL,
+		APIToken:    apiToken,
 	}, nil
 }

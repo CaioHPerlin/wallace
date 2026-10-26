@@ -34,7 +34,14 @@ func run() error {
 	}
 	defer db.Close()
 
-	router := http.NewRouter(db)
+	hub := http.NewHub()
+	router := http.NewRouter(http.Dependencies{
+		Pinger:   db,
+		Store:    db,
+		Token:    appConfig.APIToken,
+		Notifier: hub,
+		Hub:      hub,
+	})
 	httpServer := server.New(appConfig.HTTPAddress, router)
 	return httpServer.Run(ctx)
 }

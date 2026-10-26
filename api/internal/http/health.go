@@ -2,8 +2,6 @@ package http
 
 import (
 	"context"
-	"encoding/json"
-	"log"
 	nethttp "net/http"
 	"time"
 
@@ -37,7 +35,7 @@ func (h *HealthHandler) Routes() chi.Router {
 }
 
 func (h *HealthHandler) live(w nethttp.ResponseWriter, _ *nethttp.Request) {
-	writeHealth(w, nethttp.StatusOK, "ok")
+	writeJSON(w, nethttp.StatusOK, healthResponse{Status: "ok"})
 }
 
 func (h *HealthHandler) ready(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -45,16 +43,8 @@ func (h *HealthHandler) ready(w nethttp.ResponseWriter, r *nethttp.Request) {
 	defer cancel()
 
 	if err := h.pinger.Ping(ctx); err != nil {
-		writeHealth(w, nethttp.StatusServiceUnavailable, "unavailable")
+		writeJSON(w, nethttp.StatusServiceUnavailable, healthResponse{Status: "unavailable"})
 		return
 	}
-	writeHealth(w, nethttp.StatusOK, "ok")
-}
-
-func writeHealth(w nethttp.ResponseWriter, statusCode int, status string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(healthResponse{Status: status}); err != nil {
-		log.Printf("write health response: %v", err)
-	}
+	writeJSON(w, nethttp.StatusOK, healthResponse{Status: "ok"})
 }
