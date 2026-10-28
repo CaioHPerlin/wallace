@@ -60,3 +60,105 @@ A implementação do firmware e a montagem física ficam com **Caio Ricarte Loye
 6. Faça um teste de ponta a ponta pelo dashboard: as detecções devem aparecer, e as mudanças de LED ou buzzer devem chegar ao ESP32 na próxima consulta de configuração.
 
 O OpenAPI é a fonte de verdade para rotas, autenticação, payloads e mensagens do dashboard. O [guia de integração da API](docs/api.md) explica o roteamento local.
+
+## Como as Partes se Conectam
+
+| Parte                               | Responsabilidade                                                               | Comunicação                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| ESP32 e firmware                    | Ler o PIR e acionar LED/buzzer conforme a configuração                         | Requisições HTTP para a API pela rede Wi-Fi                     |
+| API Go (`api/`)                     | Validar o token, registrar dados e distribuir novas detecções                  | HTTP, SQL e WebSocket                                           |
+| PostgreSQL                          | Guardar dispositivos, configurações, último heartbeat e histórico de detecções | Acessado pela API dentro da rede do Compose                     |
+| Dashboard React/TypeScript (`web/`) | Exibir dispositivos e histórico e permitir ajustes dos atuadores               | HTTP para consultas/alterações e WebSocket para novas detecções |
+| Caddy                               | Servir o dashboard e encaminhar `/api/*`, `/ws/*` e `/docs` para a API         | Entrada do navegador na porta `5173`                            |
+
+```mermaid
+flowchart LR
+    PIR[Sensor PIR] --> ESP[ESP32 / firmware]
+    ESP --> Atuadores[LED e buzzer]
+    ESP <-->|HTTP via Wi-Fi| API[API Go]
+    Browser[Dashboard no navegador] <-->|HTTP e WebSocket| Caddy[Caddy]
+    Caddy <-->|HTTP e WebSocket| API
+    API <-->|SQL| DB[(PostgreSQL)]
+```
+
+O Compose executa API, dashboard/Caddy e banco. O firmware é desenvolvido e gravado separadamente no ESP32.
+
+### Fluxo de uma detecção
+
+1. O PIR detecta movimento; o firmware decide se aciona LED e buzzer usando a última configuração recebida.
+2. O ESP32 envia `POST /api/devices/{device_id}/detections` com o instante da detecção em segundos Unix.
+3. A API grava a detecção no PostgreSQL e publica uma mensagem WebSocket para os dashboards conectados.
+4. O dashboard usa o `device_id` da mensagem para atualizar o feed do dispositivo. O histórico persistido é consultado por HTTP em `GET /api/devices/{device_id}/detections`.
+
+### Configuração e presença do dispositivo
+
+Ao mudar um toggle, o dashboard envia `PUT /api/devices/{device_id}/config`. A API salva os valores, e o ESP32 os busca com `GET` na mesma rota a cada **3–5 segundos**. Por isso, a mudança pode levar alguns segundos para chegar ao hardware.
+
+O ESP32 deve enviar `POST /api/devices/{device_id}/heartbeat` a cada **15–30 segundos**. A API considera o dispositivo online quando o último heartbeat tem até **60 segundos**. O dashboard consulta a lista de dispositivos a cada **5 segundos**, atualizando presença e configurações. Atualmente, o WebSocket transmite apenas detecções.
+
+## Subindo e Acessando a Stack
+
+Se precisar personalizar a configuração local, crie um `.env` a partir de `.env.example`. Na raiz do repositório, execute:
+
+```sh
+docker compose up --build
+```
+
+| Acesso                            | Endereço                                  |
+| --------------------------------- | ----------------------------------------- |
+| Dashboard                         | <http://localhost:5173>                   |
+| Swagger pelo Caddy                | <http://localhost:5173/docs>              |
+| Swagger diretamente na API        | <http://localhost:8080/docs>              |
+| Contrato OpenAPI servido pela API | <http://localhost:8080/docs/openapi.yaml> |
+| API para o ESP32                  | `http://<IP-do-computador-na-rede>:8080`  |
+
+No navegador do computador que executa a stack, `localhost` aponta para esse computador. No ESP32 ou em outro computador, use o IP da máquina que executa o Compose. Os nomes `api` e `db` são endereços internos da rede Docker.
+
+Para encerrar, use `docker compose down`. O volume do PostgreSQL preserva os dados entre reinicializações da stack.
+
+### Acesso e autenticação
+
+Não há cadastro de usuário nem login com senha. As rotas `/api/devices` usam um token compartilhado: `Authorization: Bearer <API_TOKEN>`.
+
+No Swagger, clique em **Authorize**, informe somente o token, confirme **Authorize** no diálogo e feche-o. O padrão local é `dev-token`, salvo alteração de `API_TOKEN` no `.env`. O Swagger adiciona `Bearer` ao cabeçalho; um `401` indica token ausente ou incorreto.
+
+O dashboard recebe o mesmo token como `VITE_API_TOKEN` durante o build feito pelo Compose. Depois de alterar `API_TOKEN`, execute novamente `docker compose up --build` para reconstruir o dashboard e atualizar a API; ajuste também o token no firmware. Os endpoints de health e o WebSocket estão abertos na implementação atual.
+
+## WebSocket: Detecções em Tempo Real
+
+O navegador abre uma conexão em `/ws/dashboard`. Ela permanece aberta para a API enviar detecções, sem precisar consultar repetidamente se há novos eventos. Todos os dashboards conectados recebem eventos de todos os dispositivos; cada mensagem contém o `device_id` para identificar o sensor.
+
+- Pelo Caddy: `ws://localhost:5173/ws/dashboard`.
+- Diretamente na API: `ws://localhost:8080/ws/dashboard`.
+- Quando a aplicação estiver atrás de HTTPS, use `wss://` no mesmo host.
+- O ESP32 usa HTTP; não precisa abrir WebSocket.
+- A conexão atual não exige token e as mensagens enviadas pelo cliente não executam comandos na API.
+
+Exemplo de mensagem enviada pela API:
+
+```json
+{
+  "type": "detection",
+  "device_id": "A4:CF:12:34:56:78",
+  "ts": 1732300000
+}
+```
+
+Para observar o fluxo, abra o console do navegador no dashboard ou no Swagger local e execute:
+
+```js
+const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+const socket = new WebSocket(
+  `${protocol}//${window.location.host}/ws/dashboard`,
+);
+socket.addEventListener("message", (event) =>
+  console.log(JSON.parse(event.data)),
+);
+socket.addEventListener("close", () => console.log("WebSocket desconectado"));
+```
+
+Com a conexão aberta, envie uma detecção pela operação `POST /api/devices/{device_id}/detections` no Swagger, após autorizar o token. A mensagem aparecerá no console e o evento ficará no histórico. Ao terminar a observação, execute `socket.close()`.
+
+O WebSocket não oferece confirmação nem replay de eventos: mensagens podem ser perdidas durante uma desconexão ou quando o cliente não acompanha o envio. Para recuperar o histórico, consulte `GET /api/devices/{device_id}/detections`, usando `limit` e `offset`. O dashboard atual abre a conexão ao carregar a página e ainda não reconecta automaticamente; se ela cair, recarregue a página e abra o histórico do dispositivo.
+
+O contrato das mensagens está na extensão `x-websockets` do [OpenAPI](docs/api.yaml). O Swagger tem uma seção explicativa para o WebSocket; os botões **Execute** das operações HTTP não abrem essa conexão.

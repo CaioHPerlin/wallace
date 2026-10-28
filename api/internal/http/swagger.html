@@ -93,6 +93,28 @@
         padding: 20px;
         margin: 20px;
       }
+      .websocket-guide {
+        max-width: 1400px;
+        margin: 24px auto;
+        padding: 20px;
+        border: 1px solid #dce3ef;
+        border-radius: 8px;
+        background: #fff;
+        line-height: 1.65;
+      }
+      .websocket-guide summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .websocket-guide h2 {
+        font-size: 18px;
+      }
+      .websocket-guide pre {
+        overflow-x: auto;
+        padding: 16px;
+        background: #f5f7fb;
+        border-radius: 6px;
+      }
       @media (max-width: 760px) {
         .intro-inner {
           align-items: flex-start;
@@ -152,6 +174,51 @@
           </article>
         </div>
       </section>
+      <details class="websocket-guide" id="websocket-guide">
+        <summary>WebSocket guide · live detection stream</summary>
+        <h2>API → connected dashboards</h2>
+        <p>
+          Connect to <code id="websocket-url">/ws/dashboard</code>. The ESP32
+          sends detections over HTTP; the API saves each event in PostgreSQL and
+          broadcasts it to every connected dashboard. The stream is currently
+          public. Use <code>device_id</code> to identify each sensor.
+        </p>
+        <p>
+          Configuration changes use HTTP PUT, and the ESP32 polls them with GET
+          every 3–5 seconds. Heartbeats and online status also use HTTP. Sending
+          client messages on this socket does not execute API commands.
+        </p>
+        <h2>Observe events in your browser console</h2>
+        <p>
+          Run this on the dashboard or this docs page. Then authorize and
+          execute
+          <code>POST /api/devices/{device_id}/detections</code> below to
+          generate an event in the running database. HTTP Execute buttons do not
+          open a WebSocket themselves.
+        </p>
+        <pre><code>const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const socket = new WebSocket(`${protocol}//${window.location.host}/ws/dashboard`);
+socket.addEventListener('message', (event) => console.log(JSON.parse(event.data)));
+socket.addEventListener('close', () => console.log('WebSocket disconnected'));</code></pre>
+        <p>
+          A detection message looks like this; <code>ts</code> is Unix seconds:
+        </p>
+        <pre><code>{
+  "type": "detection",
+  "device_id": "A4:CF:12:34:56:78",
+  "ts": 1732300000
+}</code></pre>
+        <p>
+          Run <code>socket.close()</code> when finished. Delivery has no
+          acknowledgements or replay; disconnected or slow clients can miss
+          events. Recover persisted history with
+          <code>GET /api/devices/{device_id}/detections</code>, using
+          <code>limit</code> and <code>offset</code>. The current dashboard does
+          not reconnect automatically: reload it after a disconnection and open
+          the device history. The full message contract is in
+          <code>x-websockets</code> in the downloadable OpenAPI file.
+        </p>
+      </details>
       <div id="load-error" class="error" role="alert" hidden>
         Swagger UI could not load. Check your connection to unpkg and reload, or
         <a href="/docs/openapi.yaml">download the OpenAPI contract</a>.
@@ -161,6 +228,9 @@
     <script src="https://unpkg.com/swagger-ui-dist@5.33.1/swagger-ui-bundle.js"></script>
     <script>
       window.addEventListener("load", () => {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        document.getElementById("websocket-url").textContent =
+          `${protocol}//${window.location.host}/ws/dashboard`;
         if (typeof SwaggerUIBundle === "undefined") {
           document.getElementById("load-error").hidden = false;
           return;

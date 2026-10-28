@@ -13,6 +13,35 @@ info:
     Start with `POST /api/devices/{device_id}/heartbeat`, then `GET /api/devices`.
     An empty list means no devices have contacted the API yet.
     The `device_id` path parameter is the ESP32 factory MAC address (e.g. `A4:CF:12:34:56:78`).
+
+    ### How the system connects
+
+    The ESP32 reads the PIR and controls the LED/buzzer locally. It reports
+    detections and heartbeats over HTTP. The Go API stores devices, settings,
+    and detection history in PostgreSQL. Caddy serves the React dashboard and
+    proxies `/api/*`, `/ws/*`, and `/docs` to the API.
+
+    A recorded detection is broadcast to all connected dashboards over WebSocket.
+    Dashboard settings use HTTP PUT; firmware reads them with HTTP GET every
+    3–5 seconds. Firmware sends heartbeats every 15–30 seconds. The API considers
+    a device online for 60 seconds after its last heartbeat; the dashboard
+    refreshes its device list over HTTP every 5 seconds.
+
+    ### Dashboard WebSocket
+
+    Connect to `/ws/dashboard` using `ws://` on HTTP or `wss://` on HTTPS.
+    Local URLs: `ws://localhost:5173/ws/dashboard` through Caddy, or
+    `ws://localhost:8080/ws/dashboard` directly to the API. This connection
+    is currently public and only pushes new `detection` messages from the API
+    to clients. Each message carries `type`, `device_id`, and `ts` (Unix seconds).
+    Client messages do not change configuration or create detections.
+
+    WebSocket delivery has no acknowledgements or history replay. Retrieve
+    missed detections with `GET /api/devices/{device_id}/detections` using
+    `limit` and `offset`. The current dashboard does not reconnect automatically;
+    reload it after a disconnection. The HTTP Execute buttons do not open a
+    WebSocket; see the WebSocket guide on this page and `x-websockets` in
+    the downloadable OpenAPI file for the connection and message contract.
 servers:
   - url: /
     description: Current origin (API directly or dashboard proxy)
@@ -259,8 +288,19 @@ paths:
                 $ref: "#/components/schemas/DeviceStatus"
 x-websockets:
   /ws/dashboard:
-    description: Implemented. Open, push-only.
+    description: |
+      Implemented. Public, push-only connection. After persisting a detection,
+      the API broadcasts it to all connected clients, across all device IDs.
+      Incoming client messages are ignored. Configuration, heartbeats, and
+      history retrieval use HTTP. Delivery is best effort: disconnected or
+      slow clients can miss messages. There are no acknowledgements or replay.
+      Recover history through GET /api/devices/{device_id}/detections.
+      The current dashboard requires a page reload after disconnection.
     direction: API service to dashboard
+    security: []
+    urls:
+      - ws://localhost:5173/ws/dashboard
+      - ws://localhost:8080/ws/dashboard
     messages:
       - name: detection
         contentType: application/json
@@ -393,6 +433,10 @@ components:
               description: Unix timestamp in seconds; null before the first heartbeat.
     DashboardDetectionEvent:
       type: object
+      example:
+        type: detection
+        device_id: "A4:CF:12:34:56:78"
+        ts: 1732300000
       required: [type, device_id, ts]
       properties:
         type:
