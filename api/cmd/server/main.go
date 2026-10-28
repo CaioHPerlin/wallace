@@ -36,11 +36,12 @@ func run() error {
 
 	hub := http.NewHub()
 	router := http.NewRouter(http.Dependencies{
-		Pinger:   db,
-		Store:    db,
-		Token:    appConfig.APIToken,
-		Notifier: hub,
-		Hub:      hub,
+		Pinger:          db,
+		Store:           db,
+		Token:           appConfig.APIToken,
+		Notifier:        hub,
+		Hub:             hub,
+		OpenAPISpecPath: appConfig.OpenAPISpecPath,
 	})
 	httpServer := server.New(appConfig.HTTPAddress, router)
 	return httpServer.Run(ctx)

@@ -8,11 +8,12 @@ import (
 )
 
 type Dependencies struct {
-	Pinger   Pinger
-	Store    DeviceStore
-	Token    string
-	Notifier DetectionNotifier
-	Hub      *Hub
+	Pinger          Pinger
+	Store           DeviceStore
+	Token           string
+	Notifier        DetectionNotifier
+	Hub             *Hub
+	OpenAPISpecPath string
 }
 
 func NewRouter(deps Dependencies) nethttp.Handler {
@@ -24,5 +25,6 @@ func NewRouter(deps Dependencies) nethttp.Handler {
 	r.Mount("/api/health", NewHealthHandler(deps.Pinger).Routes())
 	r.Mount("/api/devices", NewDeviceHandler(deps.Store, deps.Token, deps.Notifier).Routes())
 	r.Get("/ws/dashboard", deps.Hub.ServeWS)
+	NewDocsHandler(deps.OpenAPISpecPath).Register(r)
 	return r
 }

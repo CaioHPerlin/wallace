@@ -2,7 +2,11 @@
 
 [`api.yaml`](api.yaml) is the canonical contract for HTTP routes and the dashboard WebSocket. Operation descriptions identify whether each endpoint is implemented or planned. The project-specific `x-websockets` extension describes the WebSocket message contract.
 
-The ESP32 communicates with the API over HTTP. The dashboard receives real-time detection events over the dashboard WebSocket. In the local stack, Caddy forwards `/api/*` and `/ws/*` to the API service.
+The ESP32 communicates with the API over HTTP. The dashboard receives real-time detection events over the dashboard WebSocket. In the local stack, Caddy forwards `/api/*`, `/docs`, and `/ws/*` to the API service.
+
+Open the Swagger UI at [`http://localhost:5173/docs`](http://localhost:5173/docs) when the Compose stack is running. The API also serves it at [`http://localhost:8080/docs`](http://localhost:8080/docs), and exposes the raw contract at `/docs/openapi.yaml`.
+
+The Swagger UI assets load from unpkg; the OpenAPI contract itself is served locally by the API.
 
 ## Device identity
 

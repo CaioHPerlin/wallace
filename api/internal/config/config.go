@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	HTTPAddress string
-	DatabaseURL string
-	APIToken    string
+	HTTPAddress     string
+	DatabaseURL     string
+	APIToken        string
+	OpenAPISpecPath string
 }
 
 // Load reads and validates runtime settings from the process environment.
@@ -34,10 +35,15 @@ func Load() (Config, error) {
 	if err != nil || portNumber < 1 || portNumber > 65535 {
 		return Config{}, fmt.Errorf("PORT must be a valid TCP port, got %q", port)
 	}
+	openAPISpecPath := strings.TrimSpace(os.Getenv("OPENAPI_SPEC_PATH"))
+	if openAPISpecPath == "" {
+		openAPISpecPath = "../docs/api.yaml"
+	}
 
 	return Config{
-		HTTPAddress: ":" + port,
-		DatabaseURL: databaseURL,
-		APIToken:    apiToken,
+		HTTPAddress:     ":" + port,
+		DatabaseURL:     databaseURL,
+		APIToken:        apiToken,
+		OpenAPISpecPath: openAPISpecPath,
 	}, nil
 }

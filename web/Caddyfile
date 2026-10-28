@@ -7,6 +7,9 @@
 	@websocket path /ws/*
 	reverse_proxy @websocket api:8080
 
+	@docs path /docs /docs/*
+	reverse_proxy @docs api:8080
+
 	root * /srv
 	try_files {path} /index.html
 	file_server

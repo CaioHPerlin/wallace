@@ -9,7 +9,7 @@ info:
     (`Authorization: Bearer <token>`). Health and dashboard WebSocket routes are open.
     The `device_id` path parameter is the ESP32 factory MAC address (e.g. `A4:CF:12:34:56:78`).
 servers:
-  - url: http://localhost:8080
+  - url: /
     description: Local API service
 paths:
   /api/health/live:
