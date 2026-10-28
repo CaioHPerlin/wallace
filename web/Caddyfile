@@ -1,16 +1,14 @@
 :80 {
 	encode zstd gzip
 
-	@api path /api/*
-	reverse_proxy @api api:8080
+	@service path /api/* /ws/* /docs /docs/*
+	handle @service {
+		reverse_proxy api:8080
+	}
 
-	@websocket path /ws/*
-	reverse_proxy @websocket api:8080
-
-	@docs path /docs /docs/*
-	reverse_proxy @docs api:8080
-
-	root * /srv
-	try_files {path} /index.html
-	file_server
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
 }
