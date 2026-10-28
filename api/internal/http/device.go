@@ -183,6 +183,7 @@ func requireToken(token string) func(nethttp.Handler) nethttp.Handler {
 	return func(next nethttp.Handler) nethttp.Handler {
 		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 			if !validToken(r, token) {
+				w.Header().Set("WWW-Authenticate", `Bearer realm="wallace"`)
 				writeError(w, nethttp.StatusUnauthorized, "unauthorized")
 				return
 			}

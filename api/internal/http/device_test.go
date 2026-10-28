@@ -115,6 +115,9 @@ func TestDeviceRoutesRequireToken(t *testing.T) {
 	if rec.Code != nethttp.StatusUnauthorized {
 		t.Fatalf("status without token = %d, want %d", rec.Code, nethttp.StatusUnauthorized)
 	}
+	if challenge := rec.Header().Get("WWW-Authenticate"); challenge != `Bearer realm="wallace"` {
+		t.Fatalf("authentication challenge = %q, want Bearer realm=wallace", challenge)
+	}
 
 	rec = doRequest(t, router, nethttp.MethodGet, "/api/devices", "", "wrong")
 	if rec.Code != nethttp.StatusUnauthorized {

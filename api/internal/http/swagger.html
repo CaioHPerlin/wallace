@@ -3,24 +3,183 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>WallAce API</title>
+    <title>WallAce · API Explorer</title>
     <link
       rel="stylesheet"
       href="https://unpkg.com/swagger-ui-dist@5.33.1/swagger-ui.css"
     />
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+        color: #172033;
+        background: #f5f7fb;
+      }
+      body {
+        margin: 0;
+      }
+      a {
+        color: #2458b8;
+      }
+      code {
+        font-size: 0.95em;
+      }
+      .intro {
+        padding: 32px 24px;
+        background: #12213a;
+        color: #fff;
+      }
+      .intro-inner,
+      .getting-started {
+        max-width: 1400px;
+        margin: auto;
+      }
+      .intro-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+      .intro h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      .intro p {
+        margin: 0;
+        color: #c9d5e8;
+      }
+      .download {
+        color: #fff;
+        border: 1px solid #8ba2c6;
+        border-radius: 6px;
+        padding: 12px 16px;
+        white-space: nowrap;
+      }
+      .getting-started {
+        padding: 24px 20px 0;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      .step {
+        background: #fff;
+        border: 1px solid #dce3ef;
+        border-radius: 8px;
+        padding: 20px;
+      }
+      .step h2 {
+        font-size: 16px;
+        margin: 0 0 12px;
+      }
+      .step p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.65;
+      }
+      .swagger-ui .wrapper {
+        max-width: 1440px;
+      }
+      .swagger-ui .info {
+        margin: 28px 0 20px;
+      }
+      .swagger-ui .opblock-tag {
+        font-size: 21px;
+      }
+      .error {
+        border: 1px solid #bd3131;
+        background: #fff4f4;
+        padding: 20px;
+        margin: 20px;
+      }
+      @media (max-width: 760px) {
+        .intro-inner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .steps {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="swagger-ui"></div>
+    <header class="intro">
+      <div class="intro-inner">
+        <div>
+          <h1>WallAce · API Explorer</h1>
+          <p>Explore device settings, heartbeats, and motion events.</p>
+        </div>
+        <a
+          class="download"
+          href="/docs/openapi.yaml"
+          download="wallace-openapi.yaml"
+          >Download OpenAPI</a
+        >
+      </div>
+    </header>
+    <main>
+      <section class="getting-started" aria-label="Getting started">
+        <div class="steps">
+          <article class="step">
+            <h2>1. Authorize requests</h2>
+            <p>
+              Click <strong>Authorize</strong> below and enter your
+              <code>API_TOKEN</code> without <code>Bearer</code>. Local Compose
+              uses <code>dev-token</code> unless changed in <code>.env</code>.
+              No account or password is needed.
+            </p>
+          </article>
+          <article class="step">
+            <h2>2. Choose a device</h2>
+            <p>
+              Use the ESP32 factory MAC address as <code>device_id</code>. To
+              simulate a device, send a
+              <a href="#/Devices/createDeviceHeartbeat">heartbeat</a> with the
+              example MAC, then list devices. An empty list means no devices
+              have contacted the API.
+            </p>
+          </article>
+          <article class="step">
+            <h2>3. Execute a request</h2>
+            <p>
+              Expand an operation, fill its parameters, then click
+              <strong>Execute</strong>. A <code>401</code> means the token is
+              missing or incorrect. Health checks are public. Requests use the
+              current host.
+            </p>
+          </article>
+        </div>
+      </section>
+      <div id="load-error" class="error" role="alert" hidden>
+        Swagger UI could not load. Check your connection to unpkg and reload, or
+        <a href="/docs/openapi.yaml">download the OpenAPI contract</a>.
+      </div>
+      <div id="swagger-ui"></div>
+    </main>
     <script src="https://unpkg.com/swagger-ui-dist@5.33.1/swagger-ui-bundle.js"></script>
     <script>
-      window.onload = () =>
-        SwaggerUIBundle({
+      window.addEventListener("load", () => {
+        if (typeof SwaggerUIBundle === "undefined") {
+          document.getElementById("load-error").hidden = false;
+          return;
+        }
+        window.ui = SwaggerUIBundle({
           url: "/docs/openapi.yaml",
           dom_id: "#swagger-ui",
           deepLinking: true,
           presets: [SwaggerUIBundle.presets.apis],
           layout: "BaseLayout",
+          filter: true,
+          docExpansion: "list",
+          defaultModelsExpandDepth: -1,
+          tryItOutEnabled: true,
+          displayRequestDuration: true,
+          persistAuthorization: false,
+          validatorUrl: null,
         });
+      });
     </script>
   </body>
 </html>

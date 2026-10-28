@@ -5,17 +5,32 @@ info:
   description: |
     HTTP API and dashboard WebSocket contract for WallAce.
 
-    Device routes under `/api/devices` require a shared bearer token
-    (`Authorization: Bearer <token>`). Health and dashboard WebSocket routes are open.
+    Device routes require the shared `API_TOKEN`. Click **Authorize**, enter the
+    token without the `Bearer` prefix, confirm **Authorize**, then close the dialog. The default local
+    Compose token is `dev-token`, unless overridden in `.env`. There is no
+    username/password login. Health and dashboard WebSocket routes are open.
+
+    Start with `POST /api/devices/{device_id}/heartbeat`, then `GET /api/devices`.
+    An empty list means no devices have contacted the API yet.
     The `device_id` path parameter is the ESP32 factory MAC address (e.g. `A4:CF:12:34:56:78`).
 servers:
   - url: /
-    description: Local API service
+    description: Current origin (API directly or dashboard proxy)
+tags:
+  - name: Health
+    description: Public checks for the API process and PostgreSQL connection.
+  - name: Devices
+    description: List devices, rename them, send heartbeats, and check online status.
+  - name: Configuration
+    description: Read or change LED and buzzer settings. Firmware polls every 3–5 seconds.
+  - name: Detections
+    description: Record motion events and browse their history. New events are pushed to dashboards.
 paths:
   /api/health/live:
     get:
       summary: Check whether the API process is alive
       description: Implemented. This check does not depend on external services.
+      tags: [Health]
       operationId: getLiveness
       responses:
         "200":
@@ -28,6 +43,7 @@ paths:
     get:
       summary: Check whether the API is ready to serve requests
       description: Implemented. Readiness requires a successful PostgreSQL connection.
+      tags: [Health]
       operationId: getReadiness
       responses:
         "200":
@@ -46,10 +62,15 @@ paths:
     get:
       summary: List known devices
       description: Implemented. Returns every device the API has seen, ordered by first contact.
+      tags: [Devices]
       operationId: listDevices
       security:
         - bearerAuth: []
       responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "200":
           description: List of devices
           content:
@@ -64,6 +85,7 @@ paths:
     patch:
       summary: Rename a device
       description: Implemented. Updates the user-facing label; empty clears it back to the MAC.
+      tags: [Devices]
       operationId: renameDevice
       security:
         - bearerAuth: []
@@ -74,6 +96,12 @@ paths:
             schema:
               $ref: "#/components/schemas/DeviceNameInput"
       responses:
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "200":
           description: Updated device
           content:
@@ -86,6 +114,7 @@ paths:
     post:
       summary: Record a motion detection from a device
       description: Implemented. The API broadcasts a `detection` event to connected dashboards.
+      tags: [Detections]
       operationId: createDetection
       security:
         - bearerAuth: []
@@ -96,6 +125,10 @@ paths:
             schema:
               $ref: "#/components/schemas/DetectionInput"
       responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "201":
           description: Detection recorded
           content:
@@ -103,10 +136,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Detection"
         "400":
-          description: Invalid request body
+          $ref: "#/components/responses/BadRequest"
     get:
       summary: List device detections
       description: Implemented. Newest first.
+      tags: [Detections]
       operationId: listDetections
       security:
         - bearerAuth: []
@@ -124,6 +158,12 @@ paths:
             default: 0
             minimum: 0
       responses:
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "200":
           description: Detection history
           content:
@@ -138,10 +178,15 @@ paths:
     get:
       summary: Get actuator configuration for a device
       description: Implemented. Firmware polls this endpoint every 3–5 seconds.
+      tags: [Configuration]
       operationId: getDeviceConfig
       security:
         - bearerAuth: []
       responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "200":
           description: Current device configuration
           content:
@@ -151,6 +196,7 @@ paths:
     put:
       summary: Update actuator configuration
       description: Implemented.
+      tags: [Configuration]
       operationId: updateDeviceConfig
       security:
         - bearerAuth: []
@@ -161,6 +207,12 @@ paths:
             schema:
               $ref: "#/components/schemas/DeviceConfig"
       responses:
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "200":
           description: Configuration updated
           content:
@@ -173,10 +225,15 @@ paths:
     post:
       summary: Record a device heartbeat
       description: Implemented. Firmware should send this every 15–30 seconds.
+      tags: [Devices]
       operationId: createDeviceHeartbeat
       security:
         - bearerAuth: []
       responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "200":
           description: Heartbeat recorded
   /api/devices/{device_id}/status:
@@ -185,10 +242,15 @@ paths:
     get:
       summary: Get current device status
       description: Implemented. `online` is derived from the last heartbeat (within 60 seconds).
+      tags: [Devices]
       operationId: getDeviceStatus
       security:
         - bearerAuth: []
       responses:
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "200":
           description: Current online state and actuator configuration
           content:
@@ -210,15 +272,51 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+      description: |
+        Enter API_TOKEN without the Bearer prefix. Local Compose defaults to
+        dev-token unless changed in .env. This is a shared token, not an account login.
+  responses:
+    Unauthorized:
+      description: Missing or incorrect bearer token. Use Authorize with the configured API_TOKEN.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: 'Bearer realm="wallace"'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: unauthorized
+    BadRequest:
+      description: Invalid request body or pagination parameters.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: The API could not complete the database operation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   parameters:
     DeviceId:
       name: device_id
       in: path
       required: true
-      description: Device MAC address, e.g. `A4:CF:12:34:56:78`.
+      description: ESP32 factory MAC address. Reuse the same value across requests.
+      example: "A4:CF:12:34:56:78"
       schema:
         type: string
   schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
     HealthResponse:
       type: object
       required: [status]
@@ -233,9 +331,11 @@ components:
         name:
           type: string
           description: User-facing label; empty falls back to the MAC address.
+          example: Front door
     Device:
       type: object
-      required: [device_id, name, led_enabled, buzzer_enabled, online, last_heartbeat]
+      required:
+        [device_id, name, led_enabled, buzzer_enabled, online, last_heartbeat]
       properties:
         device_id:
           type: string
@@ -244,8 +344,10 @@ components:
           type: string
         led_enabled:
           type: boolean
+          example: true
         buzzer_enabled:
           type: boolean
+          example: false
         online:
           type: boolean
         last_heartbeat:
@@ -258,6 +360,7 @@ components:
         ts:
           type: integer
           description: Unix timestamp in seconds
+          minimum: 1
           example: 1732300000
     Detection:
       allOf:
@@ -273,8 +376,10 @@ components:
       properties:
         led_enabled:
           type: boolean
+          example: true
         buzzer_enabled:
           type: boolean
+          example: false
     DeviceStatus:
       allOf:
         - $ref: "#/components/schemas/DeviceConfig"

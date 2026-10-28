@@ -14,6 +14,16 @@ A device is identified by its ESP32 factory MAC address (e.g. `A4:CF:12:34:56:78
 
 ## Authentication
 
-Device routes under `/api/devices` require a shared bearer token: `Authorization: Bearer <token>`. The token is configured with `API_TOKEN` (API) and the matching value in the firmware's untracked config and the dashboard's `VITE_API_TOKEN`. Health routes and the dashboard WebSocket are open.
+There is no username/password login. Device routes under `/api/devices` require a shared bearer token: `Authorization: Bearer <token>`.
+
+In Swagger UI, click **Authorize**, enter the token **without** `Bearer`, click **Authorize** in the dialog, then close it. Local Compose uses `dev-token` unless `API_TOKEN` is overridden in `.env`. A `401` response means the token is missing or incorrect. Authorization is cleared when the page is reloaded.
+
+To try the device workflow, send a heartbeat with the example MAC address, then list devices. Keep using that MAC for configuration and detection requests. These requests modify the running database; use a test device when exploring.
+
+The token is configured with `API_TOKEN` (API) and the matching value in the firmware's untracked config and the dashboard's `VITE_API_TOKEN`. Health routes and the dashboard WebSocket are open.
 
 Retry behavior remains undecided. Keep endpoint paths, payloads, and message schemas in the OpenAPI contract rather than duplicating them here.
+
+## Verify the running stack
+
+With Compose running, execute `cd api && go test -tags=integration ./integration` to check that the dashboard, Swagger UI, OpenAPI file, and API routes reach the correct service. Set `API_TOKEN` in the test environment to also check authenticated access. For the default local stack, use `API_TOKEN=dev-token go test -tags=integration ./integration`. Set `WALLACE_BASE_URL` to test a different gateway URL.
