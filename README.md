@@ -1,22 +1,33 @@
 # WallAce
 
-### Produto: Sistema de Alarmes Remotamente Configurável
+## Product
 
-### Integrantes: Caio Hygino Perlin, Caio Ricarte Loyer e Murilo Toledo
+WallAce is a remotely configurable motion alarm built around an ESP32 and a PIR sensor. It records motion events, shows them in a web dashboard, and lets users control local LED and buzzer alerts remotely.
 
-## Objetivo do Projeto
+## Team
 
-Criar um sistema IoT de detecção e monitoramento de movimento utilizando um ESP32 e um sensor PIR, permitindo o acompanhamento das detecções em tempo real por meio de um dashboard web e o controle remoto dos feedbacks físicos do dispositivo.
+- Caio Hygino Perlin
+- Caio Ricarte Loyer
+- Murilo Toledo
 
-## A Necessidade (Por que construir?)
+## Project Goal
 
-Ambientes residenciais, comerciais ou institucionais podem necessitar de uma forma simples de identificar movimentações e acompanhar esses eventos remotamente. Soluções tradicionais de monitoramento podem ser mais complexas, caras ou pouco flexíveis para projetos de pequeno porte. O WallAce busca oferecer uma alternativa simples e conectada, capaz de registrar detecções de movimento, disponibilizar essas informações em tempo real e permitir que o usuário controle e configure remotamente os alertas físicos do dispositivo.
+Build a small, connected monitoring system for residential, commercial, and institutional environments. WallAce provides motion detection, event history, real-time dashboard updates, and remote control of physical alerts.
 
-## Descrição do Produto (Como vai funcionar)
+## How It Works
 
-O WallAce utilizará um dev kit ESP32 conectado à rede Wi-Fi. Na camada de percepção, será utilizado um sensor PIR, responsável por detectar movimentações no ambiente. O dispositivo também contará com um LED e um buzzer como atuadores para fornecer feedback visual e sonoro sempre que uma movimentação for identificada.
+- **Edge device:** The ESP32 reads the PIR sensor, activates the LED and buzzer according to the current configuration, and sends detections to the API over Wi-Fi.
+- **Application:** The Go API stores detections and serves device configuration. The TypeScript dashboard shows event history, receives real-time updates over WebSocket, and controls the LED and buzzer settings.
 
-- Edge/Borda: O ESP32 realizará continuamente a leitura do sensor PIR. Ao detectar movimento, o dispositivo registrará o evento, poderá acionar localmente o LED e o buzzer e enviará a detecção ao servidor através da rede Wi-Fi. O funcionamento dos atuadores poderá ser habilitado ou desabilitado remotamente pelo usuário, sem necessidade de reprogramar o ESP32.
-- Nuvem/Aplicação: O backend será desenvolvido em Go e ficará responsável por receber os eventos enviados pelo ESP32 e distribuí-los em tempo real para o dashboard. A comunicação entre o servidor e a interface web será realizada por WebSocket. O frontend, desenvolvido em TypeScript, exibirá as detecções recentes e manterá um histórico dos eventos registrados. Pelo dashboard, o usuário também poderá habilitar ou desabilitar remotamente o buzzer e o LED, e o servidor enviará essas configurações de volta ao ESP32.
+## Integration for the Firmware Team
 
-<img width="669" height="518" alt="image" src="https://github.com/user-attachments/assets/e7d5ecc3-24f2-4bd4-b088-9cb4fad7cf0e" />
+Firmware implementation and hardware assembly are assigned to **Caio Ricarte Loyer and Murilo Toledo**. The firmware sketch and flashing workflow are maintained separately; this repository contains the integration contract and local stack.
+
+1. Start the API, dashboard, and database from the repository root with `docker compose up --build`.
+2. Connect the ESP32 to the same Wi-Fi network. Set its API base URL to `http://<computer-LAN-IP>:8080`; `localhost` from the ESP32 would refer to the board itself.
+3. Configure the Wi-Fi credentials and the same `API_TOKEN` used by the local stack in an untracked firmware config file. `.env.example` uses `dev-token` for local development; never commit real credentials.
+4. Use the ESP32 factory MAC address as `device_id`. Implement detection reporting, configuration polling, and heartbeats according to the [OpenAPI contract](docs/api.yaml).
+5. Follow [firmware integration notes](firmware/README.md) for request timing, actuator behavior, and wiring. Confirm the actual GPIO assignments during assembly and record them there.
+6. Verify the full flow in the dashboard: detections should appear, and LED or buzzer changes should reach the device on its next configuration poll.
+
+The OpenAPI document is the source of truth for endpoint paths, authentication, payloads, and dashboard messages. The [API integration guide](docs/api.md) covers local routing details.
